@@ -1,0 +1,6 @@
+name: CaptureTheAzi
+version: '1.0'
+main: net.azisaba.capturetheazi.CTAPlugin
+description: Capture The Azi
+api-version: '1.21.11'
+bootstrapper: net.azisaba.capturetheazi.CTABootstrap
