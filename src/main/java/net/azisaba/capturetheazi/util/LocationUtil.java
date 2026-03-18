@@ -1,6 +1,8 @@
 package net.azisaba.capturetheazi.util;
 
+import io.papermc.paper.math.BlockPosition;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.jetbrains.annotations.NotNull;
 
 public final class LocationUtil {
@@ -55,5 +57,13 @@ public final class LocationUtil {
         int minZ = Math.min(min.getBlockZ(), max.getBlockZ());
         int maxZ = Math.max(min.getBlockZ(), max.getBlockZ());
         return inBounds(location.getBlockX(), location.getBlockY(), location.getBlockZ(), minX, maxX, minY, maxY, minZ, maxZ);
+    }
+
+    public static @NotNull Location toLocation(@NotNull World world, @NotNull BlockPosition blockPosition) {
+        return new Location(world, blockPosition.x() + 0.5, blockPosition.y(), blockPosition.z() + 0.5);
+    }
+
+    public static @NotNull Location toBlockLocation(@NotNull World world, @NotNull BlockPosition blockPosition) {
+        return new Location(world, blockPosition.blockX(), blockPosition.blockY(), blockPosition.blockZ());
     }
 }

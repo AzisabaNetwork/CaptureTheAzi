@@ -5,7 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.papermc.paper.math.BlockPosition;
 import io.papermc.paper.math.Position;
 
-public class ExtraCodecs {
+public final class ExtraCodecs {
     public static final Codec<BlockPosition> BLOCK_POSITION =
             RecordCodecBuilder.create(instance ->
                     instance.group(

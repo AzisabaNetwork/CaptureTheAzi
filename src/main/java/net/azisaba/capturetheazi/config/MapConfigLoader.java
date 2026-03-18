@@ -93,4 +93,25 @@ public final class MapConfigLoader {
             gson.toJson(json, writer);
         }
     }
+
+    /**
+     * Creates a new {@link MapConfig} object with the specified map ID and world name,
+     * saves it to the "maps" directory as a JSON file, and returns the created configuration.
+     *
+     * @param id the unique identifier for the map being created; must not be null
+     * @param worldName the name of the world associated with the map; must not be null
+     * @return a {@link MapConfig} object representing the newly created map configuration
+     * @throws IOException if an I/O error occurs while saving the configuration file
+     * @throws IllegalArgumentException if a map configuration with the specified ID already exists
+     */
+    @Contract(value = "_, _ -> new")
+    public @NotNull MapConfig create(@NotNull String id, @NotNull String worldName) throws IOException {
+        File file = new File(plugin.getDataFolder(), "maps/" + id + ".json");
+        if (file.exists()) {
+            throw new IllegalArgumentException("Map config already exists: " + plugin.getDataFolder() + "/maps/" + id + ".json");
+        }
+        MapConfig config = new MapConfig(id, worldName, Optional.empty(), Map.of(), Map.of());
+        save(config);
+        return config;
+    }
 }
