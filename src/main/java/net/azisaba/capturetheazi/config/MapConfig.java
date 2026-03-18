@@ -1,12 +1,18 @@
 package net.azisaba.capturetheazi.config;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.papermc.paper.math.BlockPosition;
+import net.azisaba.capturetheazi.Team;
+import net.azisaba.capturetheazi.codecs.ExtraCodecs;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -14,8 +20,18 @@ import java.util.zip.ZipInputStream;
 public record MapConfig(
         @NotNull String id,
         @NotNull String worldName,
-        @Nullable String name
+        @NotNull Optional<String> name,
+        @NotNull Map<Team, BlockPosition> spawnPoints
 ) {
+    public static final Codec<MapConfig> CODEC = RecordCodecBuilder.create(builder ->
+            builder.group(
+                    Codec.STRING.fieldOf("id").forGetter(MapConfig::id),
+                    Codec.STRING.fieldOf("worldName").forGetter(MapConfig::worldName),
+                    Codec.STRING.optionalFieldOf("name").forGetter(MapConfig::name),
+                    Codec.unboundedMap(Team.CODEC, ExtraCodecs.BLOCK_POSITION).fieldOf("spawnPoints").forGetter(MapConfig::spawnPoints)
+            ).apply(builder, MapConfig::new)
+    );
+
     /**
      * Checks if the map can be loaded.
      * This method checks if the world zip file exists and contains the necessary files.
