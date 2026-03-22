@@ -31,6 +31,7 @@ public final class GameInstance extends BukkitRunnable implements AutoCloseable 
     private final Scoreboard scoreboard;
     private final @NotNull Map<Team, Set<UUID>> teamPlayers = new HashMap<>();
     private GamePhase phase = GamePhase.PRE_START;
+    private int phaseTimer = 0;
     private World world = null;
     private boolean closed = false;
 
@@ -62,18 +63,24 @@ public final class GameInstance extends BukkitRunnable implements AutoCloseable 
             throw new IllegalStateException(unavailableReason);
         }
         String worldName = "cta" + RandomUtil.randomDigits(4);
+        Path worldsDir = Paths.get("worlds");
+        Path worldDir = worldsDir.resolve(worldName);
+        while (Files.exists(worldDir)) {
+            worldName = "cta" + RandomUtil.randomDigits(4);
+            worldDir = worldsDir.resolve(worldName);
+        }
+        Path worldZipFile = mapConfig.getWorldZipPath();
+        String finalWorldName = worldName;
+        Path finalWorldDir = worldDir;
         return CompletableFuture.runAsync(() -> {
-            Path worldsDir = Paths.get("worlds");
-            Path worldDir = worldsDir.resolve(worldName);
-            Path worldZipFile = mapConfig.getWorldZipPath();
-            plugin.getSLF4JLogger().info("Unzipping world zip file ({}) to {}", worldZipFile, worldDir);
+            plugin.getSLF4JLogger().info("Unzipping world zip file ({}) to {}", worldZipFile, finalWorldDir);
             try {
-                ZipUtil.unzip(worldZipFile, worldDir);
+                ZipUtil.unzip(worldZipFile, finalWorldDir);
             } catch (IOException e) {
-                throw new RuntimeException("unzip failed (" + worldZipFile + " -> " + worldDir + ")", e);
+                throw new RuntimeException("unzip failed (" + worldZipFile + " -> " + finalWorldDir + ")", e);
             }
         }, r -> Bukkit.getScheduler().runTaskAsynchronously(plugin, r)).thenRunAsync(() -> {
-            world = Bukkit.createWorld(new WorldCreator(worldName));
+            world = Bukkit.createWorld(new WorldCreator(finalWorldName));
             teamPlayers.forEach((team, players) -> {
                 Location spawnLocation = LocationUtil.toLocation(world, mapConfig.spawnPoints().get(team));
                 for (UUID uuid : players) {
@@ -82,7 +89,7 @@ public final class GameInstance extends BukkitRunnable implements AutoCloseable 
                     player.teleport(spawnLocation);
                 }
             });
-            phase = GamePhase.PREPARATION;
+            setPhase(GamePhase.PREPARATION);
             this.runTaskTimer(plugin, 0, 20);
         }, r -> Bukkit.getScheduler().runTask(plugin, r));
     }
@@ -91,7 +98,7 @@ public final class GameInstance extends BukkitRunnable implements AutoCloseable 
     public void close() {
         if (closed) return;
         closed = true;
-        phase = GamePhase.END;
+        setPhase(GamePhase.END);
         try {
             cancel();
         } catch (IllegalStateException ignored) {}
@@ -102,6 +109,9 @@ public final class GameInstance extends BukkitRunnable implements AutoCloseable 
         Bukkit.unloadWorld(world, true);
         for (Objective objective : scoreboard.getObjectives()) {
             objective.unregister();
+        }
+        for (org.bukkit.scoreboard.Team team : scoreboard.getTeams()) {
+            team.unregister();
         }
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             // zip world
@@ -145,6 +155,18 @@ public final class GameInstance extends BukkitRunnable implements AutoCloseable 
         return Objects.requireNonNull(scoreboard, "game is not started");
     }
 
+    public @NotNull GamePhase getPhase() {
+        return phase;
+    }
+
+    public void setPhase(@NotNull GamePhase phase) {
+        Objects.requireNonNull(phase, "phase cannot be null");
+        if (phase == this.phase) return;
+        this.phase.onLeave(this);
+        this.phase = phase;
+        this.phase.onEnter(this);
+    }
+
     public void addPlayer(@NotNull Team team, @NotNull Player player) {
         teamPlayers.computeIfAbsent(team, t -> new HashSet<>()).add(player.getUniqueId());
         player.setScoreboard(scoreboard);
@@ -178,5 +200,6 @@ public final class GameInstance extends BukkitRunnable implements AutoCloseable 
             cancel();
             return;
         }
+        phaseTimer++;
     }
 }
