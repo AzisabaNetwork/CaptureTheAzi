@@ -110,7 +110,7 @@ public final class MapConfigLoader {
         if (file.exists()) {
             throw new IllegalArgumentException("Map config already exists: " + plugin.getDataFolder() + "/maps/" + id + ".json");
         }
-        MapConfig config = new MapConfig(id, worldName, Optional.empty(), Map.of(), Map.of());
+        MapConfig config = new MapConfig(id, worldName, Optional.empty(), Map.of(), Map.of(), Optional.empty());
         save(config);
         return config;
     }

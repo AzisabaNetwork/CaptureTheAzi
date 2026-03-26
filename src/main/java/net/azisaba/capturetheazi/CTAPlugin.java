@@ -8,9 +8,11 @@ import net.azisaba.capturetheazi.listener.PlayerListener;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public final class CTAPlugin extends JavaPlugin {
     private final @NotNull MapConfigLoader mapConfigLoader = new MapConfigLoader(this);
@@ -18,9 +20,9 @@ public final class CTAPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
-            commands.registrar().register(new CTACommand(this).create("cta"));
-        });
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands ->
+                commands.registrar().register(new CTACommand(this).create("cta"))
+        );
         Bukkit.getPluginManager().registerEvents(new PlayerListener(this), this);
     }
 
@@ -29,6 +31,20 @@ public final class CTAPlugin extends JavaPlugin {
     }
 
     public @NotNull List<GameInstance> getGameInstances() {
+        gameInstances.removeIf(GameInstance::isClosed);
         return gameInstances;
+    }
+
+    public @NotNull List<GameInstance> getAcceptingGameInstances() {
+        return gameInstances.stream().filter(GameInstance::isAcceptingPlayers).toList();
+    }
+
+    public @Nullable GameInstance findGame(@NotNull UUID playerId) {
+        for (GameInstance gameInstance : getGameInstances()) {
+            if (gameInstance.getTeam(playerId) != null) {
+                return gameInstance;
+            }
+        }
+        return null;
     }
 }

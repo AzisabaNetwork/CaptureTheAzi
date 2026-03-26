@@ -17,12 +17,14 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+@SuppressWarnings("UnstableApiUsage")
 public record MapConfig(
         @NotNull String id,
         @NotNull String worldName,
         @NotNull Optional<String> name,
         @NotNull Map<Team, BlockPosition> spawnPoints,
-        @NotNull Map<Team, Pair<BlockPosition, BlockPosition>> goals
+        @NotNull Map<Team, Pair<BlockPosition, BlockPosition>> goals,
+        @NotNull Optional<Pair<BlockPosition, BlockPosition>> wall
 ) {
     public static final Codec<MapConfig> CODEC = RecordCodecBuilder.create(builder ->
             builder.group(
@@ -30,7 +32,8 @@ public record MapConfig(
                     Codec.STRING.fieldOf("worldName").forGetter(MapConfig::worldName),
                     Codec.STRING.optionalFieldOf("name").forGetter(MapConfig::name),
                     Codec.unboundedMap(Team.CODEC, ExtraCodecs.BLOCK_POSITION).fieldOf("spawnPoints").forGetter(MapConfig::spawnPoints),
-                    Codec.unboundedMap(Team.CODEC, Codec.pair(ExtraCodecs.BLOCK_POSITION, ExtraCodecs.BLOCK_POSITION)).fieldOf("goals").forGetter(MapConfig::goals)
+                    Codec.unboundedMap(Team.CODEC, Codec.pair(ExtraCodecs.BLOCK_POSITION, ExtraCodecs.BLOCK_POSITION)).fieldOf("goals").forGetter(MapConfig::goals),
+                    Codec.pair(ExtraCodecs.BLOCK_POSITION, ExtraCodecs.BLOCK_POSITION).optionalFieldOf("walls").forGetter(MapConfig::wall)
             ).apply(builder, MapConfig::new)
     );
 
@@ -97,11 +100,16 @@ public record MapConfig(
 
     @Contract(value = "-> new", pure = true)
     public @NotNull MapConfig mutableCopy() {
-        return new MapConfig(id, worldName, name, new HashMap<>(spawnPoints), new HashMap<>(goals));
+        return new MapConfig(id, worldName, name, new HashMap<>(spawnPoints), new HashMap<>(goals), wall);
     }
 
     @Contract(value = "_ -> new", pure = true)
     public @NotNull MapConfig mutableCopyWithName(@NotNull String name) {
-        return new MapConfig(id, worldName, Optional.of(name), new HashMap<>(spawnPoints), new HashMap<>(goals));
+        return new MapConfig(id, worldName, Optional.of(name), new HashMap<>(spawnPoints), new HashMap<>(goals), wall);
+    }
+
+    @Contract(value = "_ -> new", pure = true)
+    public @NotNull MapConfig mutableCopyWithWall(@NotNull Pair<BlockPosition, BlockPosition> wall) {
+        return new MapConfig(id, worldName, name, new HashMap<>(spawnPoints), new HashMap<>(goals), Optional.of(wall));
     }
 }

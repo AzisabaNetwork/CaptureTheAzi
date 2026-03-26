@@ -22,8 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.papermc.paper.command.brigadier.Commands.argument;
@@ -107,6 +106,14 @@ public final class CTACommand implements BrigadierCommand {
                                         )
                                 )
                         )
+                        .then(literal("wall")
+                                .requires(source -> source.getSender().hasPermission("capturetheazi.set.wall"))
+                                .then(argument("pos1", ArgumentTypes.blockPosition())
+                                        .then(argument("pos2", ArgumentTypes.blockPosition())
+                                                .executes(ctx -> setWall(ctx.getSource(), getBlockPos(ctx, "pos1"), getBlockPos(ctx, "pos2")))
+                                        )
+                                )
+                        )
                 )
                 .then(literal("game")
                         .requires(source -> source.getSender().hasPermission("capturetheazi.game"))
@@ -123,6 +130,10 @@ public final class CTACommand implements BrigadierCommand {
                 .then(literal("leave")
                         .requires(source -> source.getSender().hasPermission("capturetheazi.leave"))
                         .executes(ctx -> leaveGame(ctx.getSource()))
+                )
+                .then(literal("join")
+                        .requires(source -> source.getSender().hasPermission("capturetheazi.join"))
+                        .executes(ctx -> joinGame(ctx.getSource()))
                 )
                 .build();
     }
@@ -260,6 +271,14 @@ public final class CTACommand implements BrigadierCommand {
         return 1;
     }
 
+    private int setWall(@NotNull CommandSourceStack source, @NotNull BlockPosition pos1, @NotNull BlockPosition pos2) {
+        MapConfig mapConfig = MapConfig.mutableCopyOf(ensureSelected(source));
+        if (mapConfig == null) return 0;
+        if (!saveMap(source, mapConfig.mutableCopyWithWall(Pair.of(pos1, pos2)))) return 0;
+        source.getSender().sendMessage(Component.text("Wall set", NamedTextColor.GREEN));
+        return 1;
+    }
+
     private int joinGame(@NotNull CommandSourceStack source, @NotNull Team team) {
         GameInstance gameInstance = ensureInGame(source);
         if (gameInstance == null) return 0;
@@ -275,6 +294,19 @@ public final class CTACommand implements BrigadierCommand {
         Player player = ensurePlayer(source);
         gameInstance.unregisterPlayer(player.getUniqueId());
         source.getSender().sendMessage(Component.text("ゲームを抜けました。", NamedTextColor.GREEN));
+        return 1;
+    }
+
+    private int joinGame(@NotNull CommandSourceStack source) {
+        List<GameInstance> gameInstances = plugin.getAcceptingGameInstances();
+        if (gameInstances.isEmpty()) {
+            source.getSender().sendMessage(Component.text("プレイヤーを募集中のゲームがありません。", NamedTextColor.RED));
+            return 0;
+        }
+        GameInstance gameInstance = gameInstances.getFirst();
+        Player player = ensurePlayer(source);
+        gameInstance.addPlayer(gameInstance.chooseTeam(), player);
+        source.getSender().sendMessage(Component.text("ゲームに参加しました。", NamedTextColor.GREEN));
         return 1;
     }
 }

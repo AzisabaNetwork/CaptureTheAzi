@@ -2,8 +2,12 @@ package net.azisaba.capturetheazi.util;
 
 import io.papermc.paper.math.BlockPosition;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public final class LocationUtil {
     /**
@@ -65,5 +69,55 @@ public final class LocationUtil {
 
     public static @NotNull Location toBlockLocation(@NotNull World world, @NotNull BlockPosition blockPosition) {
         return new Location(world, blockPosition.blockX(), blockPosition.blockY(), blockPosition.blockZ());
+    }
+
+    public static @NotNull Iterator<Location> iterate(@NotNull Location start, @NotNull Location end) {
+        World world = start.getWorld();
+        if (world == null || end.getWorld() == null || world != end.getWorld()) {
+            throw new IllegalArgumentException("start and end must be in the same world");
+        }
+
+        final int minX = Math.min(start.getBlockX(), end.getBlockX());
+        final int maxX = Math.max(start.getBlockX(), end.getBlockX());
+        final int minY = Math.min(start.getBlockY(), end.getBlockY());
+        final int maxY = Math.max(start.getBlockY(), end.getBlockY());
+        final int minZ = Math.min(start.getBlockZ(), end.getBlockZ());
+        final int maxZ = Math.max(start.getBlockZ(), end.getBlockZ());
+
+        return new Iterator<>() {
+            private int x = minX;
+            private int y = minY;
+            private int z = minZ;
+
+            @Override
+            public boolean hasNext() {
+                return y <= maxY;
+            }
+
+            @Override
+            public @NotNull Location next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+
+                Location location = new Location(world, x, y, z);
+
+                x++;
+                if (x > maxX) {
+                    x = minX;
+                    z++;
+                    if (z > maxZ) {
+                        z = minZ;
+                        y++;
+                    }
+                }
+
+                return location;
+            }
+        };
+    }
+
+    public static void fill(@NotNull Location start, @NotNull Location end, @NotNull Material type) {
+        LocationUtil.iterate(start, end).forEachRemaining(location -> location.getBlock().setType(type));
     }
 }
